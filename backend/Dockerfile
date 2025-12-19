@@ -30,8 +30,7 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 RUN curl -sS https://get.symfony.com/cli/installer | bash \
     && mv /root/.symfony5/bin/symfony /usr/local/bin/symfony
 
-# Копирование файлов проекта
-COPY ./www/ /var/www/html/
+COPY ./project/ /tmp/
 
 # Настройка рабочей директории
 WORKDIR /var/www/html
