@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  database:
+    image: postgres:16-alpine
+    container_name: notes_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: notes_db
+      POSTGRES_USER: notes_user
+      POSTGRES_PASSWORD: notes_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - notes-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U notes_user -d notes_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: notes_backend
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://notes_user:notes_password@database:5432/notes_db?serverVersion=16&charset=utf8
+      APP_ENV: dev
+      APP_SECRET: ${APP_SECRET:-changeme123}
+      CORS_ALLOW_ORIGIN: '^https?://(localhost|127\.0\.0\.1|frontend)(:[0-9]+)?$'
+    volumes:
+      - ./backend/www:/var/www/html
+    ports:
+      - "8000:80"
+    networks:
+      - notes-network
+    command: >
+      sh -c "
+      if [ ! -f /var/www/html/composer.json ] || [ ! -f /var/www/html/composer.lock ]; then
+        composer create-project symfony/skeleton . --stability=stable --no-interaction &&
+        composer require webapp --no-interaction &&
+        composer require doctrine orm doctrine/doctrine-bundle nelmio/cors-bundle --no-interaction
+      fi &&
+      composer install &&
+      php bin/console doctrine:database:create --if-not-exists &&
+      php bin/console doctrine:schema:update --force &&
+      apache2-foreground
+      "
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: notes_frontend
+    restart: unless-stopped
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    networks:
+      - notes-network
+    environment:
+      NODE_ENV: development
+    # Создаем Vue приложение при первом запуске, если его нет
+    command: >
+      sh -c "
+      if [ ! -f /app/package.json ]; then
+        echo 'Создаем базовый Vue проект...' &&
+        npm create vue@latest . -- --typescript --router --pinia --eslint-with-error-fmt-only --force
+      fi &&
+      npm install &&
+      npm run dev -- --host
+      "
+
+networks:
+  notes-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
