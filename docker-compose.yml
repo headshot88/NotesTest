@@ -73,13 +73,8 @@ services:
       NODE_ENV: development
     # Создаем Vue приложение при первом запуске, если его нет
     command: >
-      sh -c "
-      if [ ! -f /app/package.json ]; then
-        echo 'Создаем базовый Vue проект...' &&
-        npm create vue@latest . -- --typescript --router --pinia --force
-      fi &&
       npm install &&
-      npm run dev -- --host
+      npm run dev
       "
 
 networks:
