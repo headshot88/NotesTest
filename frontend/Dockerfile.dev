@@ -1,0 +1,14 @@
+# frontend/Dockerfile.dev
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Копируем существующие файлы (package.json должен быть)
+COPY package*.json ./
+COPY index.html ./
+COPY vite.config.js ./
+
+# Создаем структуру если не существует
+RUN mkdir -p src
+
+EXPOSE 5173
