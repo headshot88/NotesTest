@@ -17,6 +17,12 @@
 # После клонрования репы в корне проекта запустить
 mkdir -p backend/www && docker-compose up -d
 ```
+```bash
+#если ловим ошибку на фронте "EMPTY_REQUEST"
+docker-compose exec <ваш_контейнер> sh
+nmp install
+nmp run dev
+```
 # ВАЖНО! 
 Подождать примерно 5-7 минут пока установиться Symfony, миграция, и сбилдится Vue
 
